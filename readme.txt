@@ -1,0 +1,56 @@
+Running the W3C DOM Test Suite on Python
+========================================
+
+The domts package is a Python 2.0-or-later TSML interpreter capable of running
+the following DOMTS suites:
+
+  level1/core
+  level2/core
+  level2/events
+  level3/core
+  level3/ls
+
+Additional TSML support for the other suites is not currently provided because
+no Python DOM implementation claims to support them. Patches welcome.
+
+How to get it running:
+
+1. Download the DOM Test Suite, from http://www.w3.org/DOM/Test/ or, for more
+   up-to-date tests, the CVS project DOM-Test-Suite at dev.w3.org.
+
+2. Add DTD files. The test description XML files inside tests/levelN/feature/
+   all refer to a doctype domN.dtd which is not provided. By creating an empty
+   file called dom1.dtd in the level1/features folders, (dom2.dtd in
+   level2/feature etc.), you can stop implementations that parse the external
+   DTD from complaining. Also, the hc_staff.xml file in the levelN/core/files
+   folder currently refers to 'xhtml1-strict.dtd', also not provided - drop
+   another empty file here if you need to.
+
+3. Run rundomtests.py from the command line with the filename of the
+   alltests.xml file from the suite you want to try as an argument. The suite
+   should spin for a while before spitting out a summary of tests that were
+   failed, and tests that could not be run (because they test a feature that
+   the tested implementation didn't support).
+
+rundomtests.py tests minidom by default. If you wish to test a different
+implementation, use the --testdom=name command-line option. Known names are:
+
+  minidom - built-in with many Python distributions since version 2.0
+  4DOM - the wide-ranging implementation supplied as part of PyXML
+  pxdom - a third-party stand-alone pure-Python implementation
+  cDomlette - 4Suite 1.0's C-based optimised implementation
+  FtMiniDom - 4Suite 1.0's pure-Python backup implementation
+
+domts needs a working DOM implementation to interpret the test descriptions
+themselves. By default it will use minidom which usually suffices, but not if
+it's the minidom from Python 2.0, which is too broken to use. If you don't
+want to upgrade (or install PyXML), or you have one of those odd Python
+distributions that don't include minidom, you can specify an alternative using
+the command-line option --workdom=name. Names are as above, but don't bother
+with cDomlette/FtMiniDom, they don't support enough of the DOM to work with.
+
+If you have a new DOM implementation not covered here, it should be easy
+enough to add. See the domts/implementations.py file for details. Also, the
+domts directory can be dropped into your Python path and used as an importable
+package if you wish to control it from other software. See domts/__init__.py
+and the runSuite function.
