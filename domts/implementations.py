@@ -29,6 +29,8 @@ class Implementation:
     self.beginTest()
   def beginTest(self):
     pass
+  def beginWork(self):
+    pass
   def parseFile(self, path):
     raise NotImplementedError('Cannot parse files')
   def getImplementationAttribute(self, attr):
@@ -67,6 +69,11 @@ class Level3LSImplementation(Implementation):
     self.parser= self.implementation.createLSParser(1, None)
     self.parser.domConfig.setParameter('cdata-sections', True)
     self.parser.domConfig.setParameter('entities', True)
+
+  def beginWork(self):
+    self.parser= self.implementation.createLSParser(1, None)
+    self.parser.domConfig.setParameter('cdata-sections', False)
+    self.parser.domConfig.setParameter('entities', False)
 
   def parseFile(self, path):
     return self.parser.parseURI('file:'+urllib.pathname2url(path))
@@ -109,7 +116,10 @@ class PxdomImplementation(Level3LSImplementation):
   """
   implementationName= 'pxdom'
   def __init__(self):
-    import pxdom
+    try:
+      import pxdom
+    except ImportError:
+      from pxtl import pxdom
     self.implementation= pxdom.getDOMImplementation('')
     Level3LSImplementation.__init__(self)
   attributeParameters= dictadd(Level3LSImplementation.attributeParameters, {

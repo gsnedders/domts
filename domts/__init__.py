@@ -5,32 +5,45 @@
 """
 
 __all__= ['implementations', 'inbuilts', 'interfaces', 'interpreter', 'runSuite']
-__version__= '0.4'
+__version__= '0.5'
 
 import os, sys
 from implementations import *
 from interpreter import *
 
 def runSuite(suitePath, testImp, workImp):
-  """ Run a suite of tests, given the filename of the suite document. Test a
-      particular named implementation, using a second named implementation to
-      do internal XML-related tasks. Omit either for a default DOM. Return a
-      list of (testName, passedFlag, skippedFlag, failInfo) tuples.
+  """ Run a suite of tests, given the filename of the suite or test document.
+      Test a particular named implementation, using a second named
+      implementation to do internal XML-related tasks. Omit either for a
+      default DOM. Return a list of (testName, passedFlag, skippedFlag,
+      failInfo) tuples.
   """
+  workImp.beginWork()
   suiteDoc= workImp.parseFile(suitePath)
   basePath= os.path.dirname(suitePath)
   filesPath= os.path.join(basePath, 'files')
   tester= Tester(testImp, filesPath)
+  try:
+    workImp.setImplementationAttribute('expandEntityReferences', 1)
+  except NotImplementedError:
+    pass
 
-  results= []
-  for member in suiteDoc.getElementsByTagName('suite.member'):
-    testPath= os.path.join(basePath, member.getAttribute('href'))
-    testDoc= workImp.parseFile(testPath)
-    if testDoc.documentElement.tagName=='test':
-      testImp.beginTest()
+  if suiteDoc.documentElement.nodeName=='test':
+    testImp.beginTest()
+    return [tester.runTest(suiteDoc)]
+  elif suiteDoc.documentElement.nodeName=='suite':
+    results= []
+    for member in suiteDoc.getElementsByTagName('suite.member'):
       try:
-        results.append(tester.runTest(testDoc))
+        workImp.beginWork()
+        testPath= os.path.join(basePath, member.getAttribute('href'))
+        testDoc= workImp.parseFile(testPath)
+        if testDoc.documentElement.tagName=='test':
+          testImp.beginTest()
+          results.append(tester.runTest(testDoc))
       except:
         sys.stderr.write('Test %s died...\n' % testPath)
         raise
-  return results
+    return results
+  else:
+    raise Exception('Unknown XML file, not test or suite of tests')

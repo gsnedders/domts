@@ -4,7 +4,7 @@ from domts import runSuite, implementations
 
 import sys, getopt
 
-__usage__= 'use: rundomtests.py [--testdom=...] [--workdom=...] alltests.xml'
+__usage__= 'use: rundomtests.py [--testdom=...] [--workdom=...] test.xml'
 
 try:
   opts, args= getopt.getopt(sys.argv[1:], '', ['testdom=','workdom=','tempuri='])

@@ -16,15 +16,13 @@ except NameError: globals()['True'],globals()['False']= not None, not not None
 
 # Simple comparators for CONDITIONS map
 #
-def scmp(a, e, cs= True):
-  """ Compare a string or list of strings, possibly case-sensitively.
+def sl(s, cs= True):
+  """ If case-insensitive and s is actually a string, lower-case it
   """
   if not cs:
-    if hasattr(a, 'lower'):
-      a= a.lower()
-    if hasattr(e, 'lower'):
-      e= e.lower()
-  return a==e
+    if hasattr(s, 'lower'):
+      s= s.lower()
+  return s
 
 def inst(a, e, cs= True):
   """ Try to check an object implements a given interface. This is unreliable
@@ -41,7 +39,8 @@ CONSTANTS= {
   'true': True, 'false': False,
   'Element': 1, 'Attr': 2, 'Text': 3, 'CDATASection': 4, 'EntityReference': 5,
   'Entity': 6, 'ProcessingInstruction': 7, 'Comment': 8, 'Document': 9,
-  'DocumentType': 10, 'DocumentFragment': 11, 'Notation': 12
+  'DocumentType': 10, 'DocumentFragment': 11, 'Notation': 12,
+  'SEVERITY_WARNING': 1, 'SEVERITY_ERROR': 2, 'SEVERITY_FATAL_ERROR': 3
 }
 
 # Conditions. Used by the nested condition element of an <if>/<while>, and,
@@ -49,9 +48,9 @@ CONSTANTS= {
 # like this, but near enough.
 #
 CONDITIONS= {
-  'equals': scmp,
-  'notEquals': lambda a, e, cs: not scmp(a, e, cs),
-  'contains': lambda a, e, cs: a.find(e)!=-1,
+  'equals': lambda a, e, cs: sl(a, cs)==sl(e, cs),
+  'notEquals': lambda a, e, cs: sl(a, cs)!=sl(e, cs),
+  'contains': lambda a, e, cs: sl(a, cs).find(sl(e, cs))!=-1,
   'null': lambda a, e, cs: a is None,
   'isNull': lambda a, e, cs: a is None,
   'notNull': lambda a, e, cs: a is not None,
@@ -61,14 +60,19 @@ CONDITIONS= {
   'isFalse': lambda a, e, cs: not e,
   'size': lambda a, e, cs: len(a)==e,
   'same': lambda a, e, cs: a is e,
-  'uRIEquals': scmp,
+  'less': lambda a, e, cs: a<e,
+  'greater': lambda a, e, cs: a>e,
+  'lowerSeverity': lambda a, e, cs: e>max(
+    [0]+map(lambda e: e.severity, a.allErrors)
+  ),
+  'uRIEquals': lambda a, e, cs: sl(a, cs)==sl(e, cs),
   'instanceOf': inst,
-  'contentType': scmp,
-  'implementationAttribute': scmp
+  'contentType': lambda a, e, cs: sl(a, cs)==sl(e, cs),
+  'implementationAttribute': lambda a, e, cs: sl(a, cs)==sl(e, cs),
 }
 
 ACTUALS= ['actual', 'obj', 'collection']
-EXPECTEDS= ['expected', 'size', 'file', 'value', 'type', 'str', 'name']
+EXPECTEDS= ['expected','size','file','value','type','str','name','severity']
 
 ASSERTS= []
 for condition, comparer in CONDITIONS.items():

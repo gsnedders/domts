@@ -11,7 +11,7 @@ from interrupter import *
 try: True
 except NameError: globals()['True'],globals()['False']= not None, not not None
 NonErrors= (KeyboardInterrupt, SystemExit, SystemError, MemoryError)
-sstr= lambda x: unicode(x).encode('us-ascii', 'replace')
+sstr= lambda x: unicode(str(x)).encode('us-ascii', 'replace')
 
 class TestException(Exception):
   """ An exception occurred whilst running a test. This will cause the test to
@@ -156,9 +156,12 @@ class Tester:
       elif t in ('load', 'getResourceURI'):
         varName= child.getAttribute('var')
         ext= self.implementation.extension
-        if child.getAttribute('href')=='TESTPDF':
+        href= child.getAttribute('href')
+        if t=='getResourceURI':
+          href= self.ueval(href)
+        if href=='testpdf':
           ext= '.pdf'
-        filePath= os.path.join(self.filesPath, child.getAttribute('href').lower()+ext)
+        filePath= os.path.join(self.filesPath, href+ext)
         if t=='getResourceURI':
           self.scope[varName]= 'file:'+urllib.pathname2url(filePath)
         else:
@@ -203,14 +206,14 @@ class Tester:
     method= getattr(obj, methodName)
     arguments= []
     for par in METHODS[testNode.tagName]:
+      # special case, acceptNode has different arg names depending on its
+      # object.
       if not testNode.hasAttribute(par):
-        # special case, acceptNode has different arg names depending on its
-        # object.
         if par=='nodeArg':
           par= 'n'
       if not testNode.hasAttribute(par):
+        # special case, hasFeature can omit version arg
         if par=='version':
-          # special case, hasFeature can omit version arg
           arguments.append(None)
         elif methodName=='evaluate':
           # special case, there are two 'evaluate' methods on
@@ -327,8 +330,6 @@ class Tester:
     cs= True
     if testNode.hasAttribute('ignoreCase'):
       cs= not self.ueval(testNode.getAttribute('ignoreCase'))
-      if cs is None:
-        cs= self.implementation.contentType!='text/html'
     if not CONDITIONS[assertType](actual, expected, cs):
       if expected is not None:
         raise AssertionError('Assertion %s failed. Expected %s, got %s' % (
@@ -372,42 +373,43 @@ class Tester:
 
   def readVar(self, testNode):
     value= None
-    varType= testNode.getAttribute('type')
+    if not testNode.hasAttribute('isNull') or not self.ueval(testNode.getAttribute('isNull')):
+      varType= testNode.getAttribute('type')
 
-    # Initialise complex types
-    #
-    if varType in COMPLEXOBJECTS.keys():
-      value= COMPLEXOBJECTS[varType]()
-      for child in testNode.childNodes:
-        if child.nodeType==child.ELEMENT_NODE:
-          propType= child.tagName
-          if propType=='member':
-            value.append(self.ueval(getTextContent(child)))
-          elif propType=='var':
-            (propName, propValue)= self.readVar(child)
-            setattr(value, propName, propValue)
-          elif propType in METHODS.keys():
-            value.setMethod(propType, TSMethod(value, child, self))
-          elif propType in PROPERTIES:
-            for grandchild in child.childNodes:
-              if grandchild.nodeType==child.ELEMENT_NODE:
-                gsName= grandchild.tagName
-                if gsName=='get':
-                  value.setGetter(propType, TSMethod(value, grandchild, self))
-                elif gsName=='set':
-                  value.setSetter(propType, TSMethod(value, grandchild, self))
-                else:
-                  raise ValueError('Unknown TSML property child %s' % gsName)
-          else:
-            raise ValueError('Unknown TSML property element %s' % propType)
+      # Initialise complex types
+      #
+      if varType in COMPLEXOBJECTS.keys():
+        value= COMPLEXOBJECTS[varType]()
+        for child in testNode.childNodes:
+          if child.nodeType==child.ELEMENT_NODE:
+            propType= child.tagName
+            if propType=='member':
+              value.append(self.ueval(getTextContent(child)))
+            elif propType=='var':
+              (propName, propValue)= self.readVar(child)
+              setattr(value, propName, propValue)
+            elif propType in METHODS.keys():
+              value.setMethod(propType, TSMethod(value, child, self))
+            elif propType in PROPERTIES:
+              for grandchild in child.childNodes:
+                if grandchild.nodeType==child.ELEMENT_NODE:
+                  gsName= grandchild.tagName
+                  if gsName=='get':
+                    value.setGetter(propType, TSMethod(value, grandchild, self))
+                  elif gsName=='set':
+                    value.setSetter(propType, TSMethod(value, grandchild, self))
+                  else:
+                    raise ValueError('Unknown TSML property child %s' % gsName)
+            else:
+              raise ValueError('Unknown TSML property element %s' % propType)
 
-    # Initialise simple types
-    #
-    else:
-      if testNode.hasAttribute('value'):
-        value= self.ueval(testNode.getAttribute('value'))
-      if varType in SIMPLEOBJECTS.keys():
-        value= SIMPLEOBJECTS[varType](value)
+      # Initialise simple types
+      #
+      else:
+        if testNode.hasAttribute('value'):
+          value= self.ueval(testNode.getAttribute('value'))
+        if varType in SIMPLEOBJECTS.keys():
+          value= SIMPLEOBJECTS[varType](value)
 
     return (testNode.getAttribute('name'), value)
 

@@ -53,11 +53,11 @@ PROPERTIES= [
   'baseURI', 'textContent', 'wholeText', 'isElementContentWhitespace',
   'typeInfo', 'typeName', 'typeNamespace', 'severity', 'relatedException',
   'relatedData', 'location', 'lineNumber', 'columnNumber', 'byteOffset',
-  'utf16Offset', 'relatedNode', 'uri', 'parameterNames',
+  'utf16Offset', 'relatedNode', 'uri', 'parameterNames', 'message',
   # level3/ls
-  'config', 'filter', 'async', 'busy', 'characterStream', 'byteStream',
-  'encoding', 'stringData', 'certifiedText', 'whatToShow', 'input'
-  'position', 'totalSize', 'newDocument', 'newLine',
+  'filter', 'async', 'busy', 'characterStream', 'byteStream', 'encoding',
+  'stringData', 'certifiedText', 'whatToShow', 'input', 'position',
+  'totalSize', 'newDocument', 'newLine',
   # level3/validation
   'continuousValidityChecking', 'defaultValue', 'enumeratedValues',
   'allowedChildren', 'allowedFirstChildren', 'allowedParents',
@@ -68,7 +68,7 @@ PROPERTIES= [
   'singleNodeValue', 'invalidIteratorState', 'snapshotLength',
   # TS-specific properties
   'allErrors', 'allEvents', 'atEvents', 'bubbledEvents', 'capturedEvents',
-  'allNotifications', 'operation', 'key', 'dst'
+  'allNotifications', 'operation', 'key', 'dst', 'errors',
 ]
 
 # DOMException types, in order.
@@ -149,6 +149,8 @@ METHODS= {
   'focus':                       [],
   'select':                      [],
   'click':                       [],
+  'submit':                      [],
+  'reset':                       [],
   # level2/core
   'createDocumentType':          ['qualifiedName', 'publicId', 'systemId'],
   'createDocument':              ['namespaceURI', 'qualifiedName', 'doctype'],
@@ -200,7 +202,10 @@ METHODS= {
   'getParameter':                ['name'],
   'setParameter':                ['name', 'value'],
   'canSetParameter':             ['name', 'value'],
+  'handleError':                 ['error'],
   'contains':                    ['str'],
+  'isDerivedFrom':               ['typeNamespaceArg', 'typeNameArg',
+                                  'derivationMethod'],
   # level3/ls
   'createLSParser':              ['mode', 'schemaType'],
   'createLSSerializer':          [],
@@ -341,7 +346,8 @@ COMPLEXOBJECTS= dictadd(OBJECTS, {
   'LSParserFilter': TestCreatedObject,
   'LSSerializerFilter': TestCreatedObject,
   'LSResourceResolver': TestCreatedObject,
-  'EventMonitor':  EventMonitor,
+  'DOMErrorHandler': TestCreatedObject,
   'DOMErrorMonitor': DOMErrorMonitor,
+  'EventMonitor':  EventMonitor,
   'UserDataMonitor': UserDataMonitor
 })
