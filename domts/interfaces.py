@@ -21,10 +21,32 @@ PROPERTIES= [
   'attributes', 'name', 'value', 'specified', 'data', 'length', 'doctype',
   'implementation', 'documentElement', 'entities', 'notations', 'tagName',
   'target', 'notationName', 'publicId', 'systemId', 'code',
+  # level1/html
+  'title', 'referrer', 'domain', 'URL', 'body', 'images', 'applets', 'links',
+  'forms', 'anchors', 'cookie', 'id', 'title', 'lang', 'dir', 'className',
+  'version', 'profile', 'disabled', 'charset', 'href', 'hreflang', 'media',
+  'rel', 'rev', 'target', 'type', 'text', 'content', 'httpEquiv', 'name',
+  'scheme', 'form', 'prompt', 'aLink', 'background', 'bgColor', 'link',
+  'vLink', 'elements', 'acceptCharset', 'action', 'enctype', 'method',
+  'selectedIndex', 'options', 'multiple', 'size', 'tabIndex', 'label',
+  'selected', 'defaultSelected', 'index', 'defaultValue', 'defaultChecked',
+  'accept', 'accessKey', 'align', 'alt', 'checked', 'maxLength', 'readOnly',
+  'src', 'useMap', 'rows', 'cols', 'htmlFor', 'compact', 'start', 'cite',
+  'width', 'clear', 'color', 'face', 'noShade', 'dateTime', 'coords', 'shape',
+  'lowSrc', 'border', 'height', 'hspace', 'vspace', 'isMap', 'longDesc',
+  'code', 'archive', 'codeBase', 'codeType', 'declare', 'standby',
+  'valueType', 'object', 'areas', 'noHref', 'event', 'defer', 'tBodies',
+  'cellPadding', 'cellSpacing', 'frame', 'rules', 'summary', 'caption',
+  'tHead', 'tFoot', 'ch', 'chOff', 'span', 'vAlign', 'rowIndex',
+  'sectionRowIndex', 'cells', 'cellIndex', 'abbr', 'axis', 'colSpan',
+  'headers', 'noWrap', 'rowSpan', 'scope', 'frameBorder', 'marginHeight',
+  'marginWidth', 'noResize', 'scrolling',
   # level2/core
   'prefix', 'localName', 'namespaceURI', 'ownerElement', 'internalSubset',
+  # level2/html
+  'contentDocument',
   # level2/events
-  'type', 'currentTarget', 'eventPhase', 'bubbles', 'cancelable', 'timeStamp',
+  'currentTarget', 'eventPhase', 'bubbles', 'cancelable', 'timeStamp',
   # level3/core
   'schemaTypeInfo', 'isId', 'inputEncoding', 'xmlEncoding', 'xmlVersion',
   'xmlStandalone', 'strictErrorChecking', 'documentURI', 'domConfig',
@@ -34,21 +56,32 @@ PROPERTIES= [
   'utf16Offset', 'relatedNode', 'uri', 'parameterNames',
   # level3/ls
   'config', 'filter', 'async', 'busy', 'characterStream', 'byteStream',
-  'encoding', 'stringData', 'certifiedText', 'type', 'whatToShow', 'input'
+  'encoding', 'stringData', 'certifiedText', 'whatToShow', 'input'
   'position', 'totalSize', 'newDocument', 'newLine',
+  # level3/validation
+  'continuousValidityChecking', 'defaultValue', 'enumeratedValues',
+  'allowedChildren', 'allowedFirstChildren', 'allowedParents',
+  'allowedNextSiblings', 'allowedPreviousSiblings', 'allowedAttributes',
+  'requiredAttributes', 'contentType',
+  # level3/xpath
+  'resultType', 'numberValue', 'stringValue', 'booleanValue',
+  'singleNodeValue', 'invalidIteratorState', 'snapshotLength',
   # TS-specific properties
   'allEvents', 'atEvents', 'bubbledEvents', 'capturedEvents'
 ]
 
 # DOMException types, in order.
 #
-EXCEPTIONS= [
+EXCEPTIONS= [ '*',
   'INDEX_SIZE_ERR', 'DOMSTRING_SIZE_ERR', 'HIERARCHY_REQUEST_ERR',
   'WRONG_DOCUMENT_ERR', 'INVALID_CHARACTER_ERR', 'NO_DATA_ALLOWED_ERR',
   'NO_MODIFICATION_ALLOWED_ERR', 'NOT_FOUND_ERR', 'NOT_SUPPORTED_ERR',
   'INUSE_ATTRIBUTE_ERR', 'INVALID_STATE_ERR', 'SYNTAX_ERR',
   'INVALID_MODIFICATION_ERR', 'NAMESPACE_ERR', 'INVALID_ACCESS_ERR',
   'VALIDATION_ERR', 'TYPE_MISMATCH_ERR'
+]
+EXCEPTIONS= EXCEPTIONS+['*']*(51-len(EXCEPTIONS))+ [
+  'INVALID_EXPRESSION_ERR', 'TYPE_ERR'
 ]
 
 # DOM methods and the correct order for their arguments.
@@ -89,6 +122,29 @@ METHODS= {
   'deleteData':                  ['offset', 'count'],
   'replaceData':                 ['offset', 'count', 'arg'],
   'splitText':                   ['offset'],
+  # level1/html
+  'namedItem':                   ['name'],
+  'open':                        [],
+  'close':                       [],
+  'write':                       ['text'],
+  'writeln':                     ['text'],
+  'getElementsByName':           ['elementName'],
+  'add':                         ['element', 'before'],
+  'remove':                      ['index'],
+  'createTHead':                 [],
+  'deleteTHead':                 [],
+  'createTFoot':                 [],
+  'deleteTFoot':                 [],
+  'createCaption':               [],
+  'deleteCaption':               [],
+  'insertRow':                   ['index'],
+  'deleteRow':                   ['index'],
+  'insertCell':                  ['index'],
+  'deleteCell':                  ['index'],
+  'blur':                        [],
+  'focus':                       [],
+  'select':                      [],
+  'click':                       [],
   # level2/core
   'createDocumentType':          ['qualifiedName', 'publicId', 'systemId'],
   'createDocument':              ['namespaceURI', 'qualifiedName', 'doctype'],
@@ -172,6 +228,36 @@ METHODS= {
   'isImmediatePropagationStopped':[],
   'setDispatchState':            ['target', 'phase'],
   'stopImmediatePropagation':    [],
+  # level3/validation
+  'getDefinedElements':          ['namespaceURI'],
+  'validateDocument':            [],
+  'canInsertBefore':             ['newChild', 'refChild'],
+  'canRemoveChild':              ['oldChild'],
+  'canReplaceChild':             ['newChild', 'oldChild'],
+  'canAppendChild':              ['newChild'],
+  'nodeValidity':                ['valType'],
+  'canSetTextContent':           ['possibleTextContent'],
+  'canSetAttribute':             ['attrname', 'attrval'],
+  'canSetAttributeNode':         ['attrNode'],
+  'canSetAttributeNS':           ['namespaceURI', 'qualifiedName', 'value'],
+  'canRemoveAttribute':          ['attrname'],
+  'canRemoveAttributeNode':      ['attrNode'],
+  'canRemoveAttributeNS':        ['namespaceURI', 'localName'],
+  'isElementDefined':            ['name'],
+  'isElementDefinedNS':          ['namespaceURI', 'name'],
+  'isWhitespaceOnly':            [],
+  'canSetData':                  ['arg'],
+  'canAppendData':               ['arg'],
+  'canReplaceData':              ['offset', 'count', 'arg'],
+  'canInsertData':               ['offset', 'arg'],
+  'canDeleteData':               ['offset', 'count'],
+  # level3/xpath
+  'createExpression':            ['expression', 'resolver'],
+  'createNSResolver':            ['nodeResolver'],
+  'iterateNext':                 [],
+  'snapshotItem':                ['index'],
+  'evaluate':                    ['expression', 'contextNode', 'resolver',
+                                  'type', 'result'], # special case!
 }
 
 

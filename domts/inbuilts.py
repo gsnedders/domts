@@ -20,8 +20,10 @@ def scmp(a, e, cs= True):
   """ Compare a string or list of strings, possibly case-sensitively.
   """
   if not cs:
-    a= a.lower()
-    e= e.lower()
+    if hasattr(a, 'lower'):
+      a= a.lower()
+    if hasattr(e, 'lower'):
+      e= e.lower()
   return a==e
 
 def inst(a, e, cs= True):
@@ -71,7 +73,9 @@ ASSERTS= []
 for condition, comparer in CONDITIONS.items():
   ASSERTS.append('assert'+condition[0].upper()+condition[1:])
 
-EXCEPTIONASSERTS= ['assertDOMException', 'assertImplementationException']
+EXCEPTIONASSERTS= [
+  'assertDOMException','assertXPathException','assertImplementationException'
+]
 
 UNARYOPS= {
   'increment': operator.add,

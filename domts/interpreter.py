@@ -51,6 +51,9 @@ class Tester:
         return (testName, False, True, str(e))
       except (AssertionError, TestException), e:
         return (testName, False, False, str(e)) 
+      except ReturnValue, e:
+        if e is not None:
+          raise
       return (testName, True, False, None)
     finally:
       for path in self.tempFiles:
@@ -129,8 +132,12 @@ class Tester:
         self.whileLoop(child)
       elif t=='if':
         self.ifCondition(child)
+      elif t=='try':
+        self.tryBlock(child)
       elif t=='return':
-        raise ReturnValue(self.ueval(child.getAttribute('value')))
+        if child.hasAttribute('value'):
+          raise ReturnValue(self.ueval(child.getAttribute('value')))
+        raise ReturnValue(None)
       elif t=='var':
         (varName, initialValue)= self.readVar(child)
         self.scope[varName]= initialValue
@@ -155,6 +162,10 @@ class Tester:
         self.scope[child.getAttribute('var')]= (
           'http://localhost:8080/domts/temp/%d.xml'%int(random.random()*10000)
         )
+      elif t=='createXPathEvaluator':
+        self.scope[child.getAttribute('var')]= (
+          self.ueval(child.getAttribute('document'))
+        )
       elif t=='debug':
         print self.ueval(child.getAttribute('out'))
       else:
@@ -172,8 +183,13 @@ class Tester:
     arguments= []
     for par in METHODS[testNode.tagName]:
       if not testNode.hasAttribute(par):
-        if par=='version': # special case, hasFeature can omit version arg
+        if par=='version':
+          # special case, hasFeature can omit version arg
           arguments.append(None)
+        elif methodName=='evaluate':
+          # special case, there are two 'evaluate' methods on
+          # different objects. One omits a couple of arguments.
+          pass
         else:
           raise ValueError('TSML argument attribute %s missing' % par)
       else:
@@ -187,7 +203,7 @@ class Tester:
         interrupter.finish()
     except NonErrors:
       raise
-    except (TestException, AssertionError):
+    except (TestException, AssertionError, ReturnValue):
       raise
     except Exception, e:
       raise TestException('Calling %s on %s' % (methodName, str(obj)), e)
@@ -219,7 +235,7 @@ class Tester:
         raise TestException('Missing property %s on %s'%(propName,str(obj)),e)
       except NonErrors:
         raise
-      except (TestException, AssertionError):
+      except (TestException, AssertionError, ReturnValue):
         raise
       except Exception, e:
         raise TestException('Getting %s on %s' % (propName,str(obj)), e)
@@ -242,7 +258,7 @@ class Tester:
       has= hasattr(obj, propName)
     except NonErrors:
       raise
-    except (TestException, AssertionError):
+    except (TestException, AssertionError, ReturnValue):
       raise
     except Exception, e:
       raise TestException('Broken %s on %s' % (propName,str(obj)), e)
@@ -295,7 +311,7 @@ class Tester:
     requiredException= None
     if len(assertContents)>0:
       if assertContents[0].tagName in EXCEPTIONS:
-        requiredException= EXCEPTIONS.index(assertContents[0].tagName)+1
+        requiredException= EXCEPTIONS.index(assertContents[0].tagName)
         assertContents= assertContents[0].childNodes
     try:
       self.process(assertContents)
@@ -303,13 +319,13 @@ class Tester:
       if requiredException is not None:
         if getattr(e.exception, 'code', None)!=requiredException:
           raise AssertionError('Assertion %s failed. Expected %s, got %s %s'%(
-            testNode.getAttribute('id'), EXCEPTIONS[requiredException-1],
+            testNode.getAttribute('id'), EXCEPTIONS[requiredException],
             e.exception.__class__.__name__, str(e.exception)
           ))
     else:
       if requiredException is not None:
         raise AssertionError('Assertion %s failed. Expected %s, got none' % (
-          testNode.getAttribute('id'), EXCEPTIONS[requiredException-1]
+          testNode.getAttribute('id'), EXCEPTIONS[requiredException]
         ))
       else:
         raise AssertionError('Assertion %s failed. Exception didn\'t occur' %
@@ -396,7 +412,31 @@ class Tester:
       raise TestException('Reading list %s' % collection, e)
     for self.scope[member] in collectionList:
       self.process(testNode.childNodes)
-  
+
+  def tryBlock(self, testNode):
+    catches= []
+    others= []
+    for child in testNode.childNodes:
+      if child.nodeType==child.ELEMENT_NODE and child.tagName=='catch':
+        for grandchild in child.childNodes:
+          if grandchild.nodeType==child.ELEMENT_NODE:
+            catches.append(grandchild)
+      else:
+        others.append(child)
+    try:
+      self.process(others)
+    except TestException, e:
+      for catch in catches:
+        if catch.tagName!='ImplementationException':
+          if hasattr(e.exception, 'code'):
+            if e.exception.code==EXCEPTIONS.index(catch.getAttribute('code')):
+              break
+        if catch.tagName=='ImplementationException':
+          break
+      else:
+        raise # exception had no matching <catch>
+      self.process(catch.childNodes)
+
 
   def checkCondition(self, condNode):
     # If the condition is an operator like <or>, recurse into each subcondition

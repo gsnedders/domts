@@ -5,7 +5,7 @@
 """
 
 __all__= ['implementations', 'inbuilts', 'interfaces', 'interpreter', 'runSuite']
-__version__= '0.1'
+__version__= '0.2'
 
 import os, sys
 from implementations import *
