@@ -209,7 +209,7 @@ METHODS= {
   'writeToURI':                  ['nodeArg', 'uri'],
   'writeToString':               ['nodeArg'],
   'startElement':                ['elementArg'],
-  'acceptNode':                  ['nodeArg'],
+  'acceptNode':                  ['nodeArg'], # special case, also 'n'!
   'resolveResource':             ['type', 'namespaceURI', 'publicId',
                                   'systemId', 'baseURI'],
   # level3/events

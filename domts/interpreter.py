@@ -120,7 +120,11 @@ class Tester:
         self.scope[varName]= self.ueval(child.getAttribute('value'))
       elif t=='append':
         varName= child.getAttribute('collection')
-        self.scope[varName].append(self.scope[child.getAttribute('obj')])
+        if child.hasAttribute('item'):
+          member= self.ueval(child.getAttribute('item'))
+        else:
+          member= self.scope[child.getAttribute('obj')]
+        self.scope[varName].append(member)
       elif t=='substring':
         ix0= self.ueval(child.getAttribute('beginIndex'))
         ix1= self.ueval(child.getAttribute('endIndex'))
@@ -148,7 +152,7 @@ class Tester:
       elif t in ('load', 'getResourceURI'):
         varName= child.getAttribute('var')
         ext= self.implementation.extension
-        filePath= os.path.join(self.filesPath, child.getAttribute('href')+ext)
+        filePath= os.path.join(self.filesPath, child.getAttribute('href').lower()+ext)
         if t=='getResourceURI':
           self.scope[varName]= 'file:'+urllib.pathname2url(filePath)
         else:
@@ -182,6 +186,11 @@ class Tester:
     method= getattr(obj, methodName)
     arguments= []
     for par in METHODS[testNode.tagName]:
+      if not testNode.hasAttribute(par):
+        # special case, acceptNode has different arg names depending on its
+        # object.
+        if par=='nodeArg':
+          par= 'n'
       if not testNode.hasAttribute(par):
         if par=='version':
           # special case, hasFeature can omit version arg
@@ -531,6 +540,9 @@ class TSMethod:
           argNames[ix]
         )
       scope[argNames[ix]]= args[ix]
+      # special case, n and nodeArg again
+      if argNames[ix]=='nodeArg':
+        scope['n']= args[ix]
 
     # Replace tester's local scope
     #
