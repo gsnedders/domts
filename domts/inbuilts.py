@@ -109,10 +109,15 @@ IGNORE= ['comment', 'metadata', 'else']
 class OrderedList(UserList):
   """ List that can be recursively lowercased for comparison purposes.
   """
-  def __init__(self, data= []):
-    self.data= data[:]
+  def __init__(self, data= None):
+    if isinstance(data, UserList):
+      self.data= data.data
+    elif data is not None:
+      self.data= data
+    else:
+      self.data= []
   def lower(self):
-    lower= []
+    lower= self.__class__()
     for datum in self.data:
       lower.append(datum.lower())
     return lower
@@ -147,6 +152,8 @@ class TestCreatedObject:
   """ Object created by a TS test, which must then fill in the members itself.
       Method members are added by nasty magic.
   """
+  def __init__(self, date= None):
+    pass
   def __getattr__(self, attr):
     if self.__dict__.has_key('_meth_'+attr):
       return self.__dict__['_meth_'+attr]

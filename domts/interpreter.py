@@ -7,11 +7,17 @@ import os, sys, urllib, tempfile, random
 from inbuilts import *
 from interfaces import *
 from interrupter import *
+from imitation import PORT
 
 try: True
 except NameError: globals()['True'],globals()['False']= not None, not not None
-NonErrors= (KeyboardInterrupt, SystemExit, SystemError, MemoryError)
-sstr= lambda x: unicode(str(x)).encode('us-ascii', 'replace')
+NonErrors= (KeyboardInterrupt, SystemExit, MemoryError)
+def sstr(x):
+  if type(x) not in (type(''), type(u'')):
+    x= unicode(str(x))
+  else:
+    x= unicode(x)
+  return x.encode('us-ascii', 'replace')
 
 class TestException(Exception):
   """ An exception occurred whilst running a test. This will cause the test to
@@ -179,9 +185,8 @@ class Tester:
           varName= child.getAttribute('var')
           self.scope[varName]= 'file:'+urllib.pathname2url(filePath)
         elif scheme=='http':
-          self.scope[child.getAttribute('var')]= (
-            'http://localhost:8080/domts/temp/%d.xml'%int(random.random()*10000)
-          )
+          uri= 'http://localhost:%d/%d.xml' % (PORT,int(random.random()*1000))
+          self.scope[child.getAttribute('var')]= uri
         else:
           raise NotImplementedError('Unknown scheme '+scheme)
       elif t=='createXPathEvaluator':
@@ -200,8 +205,12 @@ class Tester:
     methodName= testNode.tagName
     obj= self.ueval(testNode.getAttribute('obj'))
     if not hasattr(obj, testNode.tagName):
+      try:
+        strobj= str(obj)
+      except Exception, e:
+        strobj= '(unprintable object)'
       raise TestException('Missing method %s on %s' % (
-        methodName, str(obj)), AttributeError()
+        methodName, strobj), AttributeError()
       )
     method= getattr(obj, methodName)
     arguments= []
@@ -235,7 +244,11 @@ class Tester:
     except (TestException, AssertionError, ReturnValue):
       raise
     except Exception, e:
-      raise TestException('Calling %s on %s' % (methodName, str(obj)), e)
+      try:
+        strobj= str(obj)
+      except Exception, e:
+        strobj= '(unprintable object)'
+      raise TestException('Calling %s on %s' % (methodName, strobj), e)
     if testNode.hasAttribute('var'):
       self.scope[testNode.getAttribute('var')]= value
 
@@ -261,13 +274,21 @@ class Tester:
         finally:
           interrupter.finish()
       except AttributeError, e:
-        raise TestException('Missing property %s on %s'%(propName,str(obj)),e)
+        try:
+          strobj= str(obj)
+        except Exception, e:
+          strobj= '(unprintable object)'
+        raise TestException('Missing property %s on %s'%(propName,strobj),e)
       except NonErrors:
         raise
       except (TestException, AssertionError, ReturnValue):
         raise
       except Exception, e:
-        raise TestException('Getting %s on %s' % (propName,str(obj)), e)
+        try:
+          strobj= str(obj)
+        except Exception, e:
+          strobj= '(unprintable object)'
+        raise TestException('Getting %s on %s' % (propName,strobj), e)
 
     # Write to variable
     #
@@ -324,8 +345,12 @@ class Tester:
     if testNode.hasAttribute('isAbsolute'):
       ab= self.ueval(testNode.getAttribute('isAbsolute'))
       if ab and expected is not None:
-        ext= self.implementation.extension
-        path= os.path.join(self.filesPath, expected+ext)
+        # see if it could be an external entity first. TSML files don't
+        # specify, weird
+        path= os.path.join(self.filesPath, expected+'.ent')
+        if not os.path.exists(path):
+          ext= self.implementation.extension
+          path= os.path.join(self.filesPath, expected+ext)
         expected= 'file:'+urllib.pathname2url(path)
     cs= True
     if testNode.hasAttribute('ignoreCase'):
@@ -372,14 +397,17 @@ class Tester:
 
 
   def readVar(self, testNode):
+    name= testNode.getAttribute('name')
     value= None
     if not testNode.hasAttribute('isNull') or not self.ueval(testNode.getAttribute('isNull')):
       varType= testNode.getAttribute('type')
+      if testNode.hasAttribute('value'):
+        value= self.ueval(testNode.getAttribute('value'))
 
       # Initialise complex types
       #
       if varType in COMPLEXOBJECTS.keys():
-        value= COMPLEXOBJECTS[varType]()
+        value= COMPLEXOBJECTS[varType](value)
         for child in testNode.childNodes:
           if child.nodeType==child.ELEMENT_NODE:
             propType= child.tagName
@@ -401,17 +429,14 @@ class Tester:
                   else:
                     raise ValueError('Unknown TSML property child %s' % gsName)
             else:
-              raise ValueError('Unknown TSML property element %s' % propType)
+              raise ValueError('Unknown TSML property element %s' %propType)
 
       # Initialise simple types
       #
-      else:
-        if testNode.hasAttribute('value'):
-          value= self.ueval(testNode.getAttribute('value'))
-        if varType in SIMPLEOBJECTS.keys():
+      elif varType in SIMPLEOBJECTS.keys():
           value= SIMPLEOBJECTS[varType](value)
 
-    return (testNode.getAttribute('name'), value)
+    return (name, value)
 
 
   def ifCondition(self, testNode):

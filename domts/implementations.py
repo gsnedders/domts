@@ -72,6 +72,7 @@ class Level3LSImplementation(Implementation):
 
   def beginWork(self):
     self.parser= self.implementation.createLSParser(1, None)
+    self.parser.domConfig.setParameter('normalize-characters', False)
     self.parser.domConfig.setParameter('cdata-sections', False)
     self.parser.domConfig.setParameter('entities', False)
 
@@ -112,7 +113,9 @@ class Level3LSImplementation(Implementation):
 # Concrete Implementation classes
 #
 class PxdomImplementation(Level3LSImplementation):
-  """ Implementation hook for pxdom, using DOM Level 3 LS methods.
+  """ Implementation hook for pxdom, using DOM Level 3 LS methods. Might be
+      'validating' (ie. external-entity-including), depending on version -
+      sniff for support before saying it can do it.
   """
   implementationName= 'pxdom'
   def __init__(self):
@@ -159,6 +162,8 @@ class MinidomImplementation(Implementation):
 
 class FourDOMImplementation(Implementation):
   """ Implementation hook for 4DOM, PyXML's extended DOM implementation.
+      Different versions seem to be 'validating' or not, but with the PyExpat
+      Reader in the latest version it seems not to be, so say false.
   """
   implementationName= '4DOM'
   def __init__(self):
@@ -183,7 +188,7 @@ class FourDOMImplementation(Implementation):
 
   fixedAttributes= dictadd(Implementation.fixedAttributes, {
     'namespaceAware': True,
-    'validating': True, # Actually, this just means external entities are ok
+    'validating': False,
     'schemaValidating': False,
     'expandEntityReferences': True,
     'ignoringElementContentWhitespace': False,

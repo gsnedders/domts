@@ -1,15 +1,17 @@
 """ Python Document Object Model Test Suite. Interprets test suites from the
     W3C DOMTS project and carries them out against known Python DOM
-    implementations. Requires Python 1.6 or later (as it uses Unicode and
-    string methods).
+    implementations. Requires Python 2.0 or later.
 """
 
-__all__= ['implementations', 'inbuilts', 'interfaces', 'interpreter', 'runSuite']
-__version__= '0.5'
+__all__= [ 'runSuite',
+  'implementations', 'inbuilts', 'interfaces', 'interpreter', 'imitation'
+]
+__version__= '0.6'
 
 import os, sys
 from implementations import *
 from interpreter import *
+from imitation import *
 
 def runSuite(suitePath, testImp, workImp):
   """ Run a suite of tests, given the filename of the suite or test document.
@@ -18,6 +20,7 @@ def runSuite(suitePath, testImp, workImp):
       default DOM. Return a list of (testName, passedFlag, skippedFlag,
       failInfo) tuples.
   """
+  imitate()
   workImp.beginWork()
   suiteDoc= workImp.parseFile(suitePath)
   basePath= os.path.dirname(suitePath)

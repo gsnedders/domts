@@ -308,7 +308,7 @@ SIMPLEOBJECTS= {
 # parameters to be checked later.
 #
 class EventMonitor:
-  def __init__(self):
+  def __init__(self, value= None):
     self.allEvents= []
     self.capturedEvents= []
     self.atEvents= []
@@ -319,14 +319,14 @@ class EventMonitor:
     ][evt.eventPhase-1].append(evt)
 
 class DOMErrorMonitor:
-  def __init__(self):
+  def __init__(self, value= None):
     self.allErrors= []
   def handleError(self, error):
     self.allErrors.append(error)
     return (error.severity<2)
 
 class UserDataMonitor:
-  def __init__(self):
+  def __init__(self, value= None):
     self.allNotifications= []
   def handle(self, operation, key, data, src, dst):
     self.allNotifications.append(Notification(operation, key, data, src, dst))

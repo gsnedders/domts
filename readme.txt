@@ -2,7 +2,7 @@ Running the W3C DOM Test Suite on Python
 ========================================
 
 The domts package is a Python 2.0-or-later TSML interpreter capable of running
-the tests in the current DOMTS suites, as of May 2004: level1/core, html;
+the tests in the current DOMTS suites, as of June 2004: level1/core, html;
 level2/core, html, events; level3/core, ls, events, validation, xpath).
 
 How to get it running:
@@ -17,10 +17,10 @@ How to get it running:
    drop empty files in their place. (ie. dom2.dtd in tests/level2/core, etc.)
 
 3. Some of the level3 test description files use an external entity, eg.
-   dom3tests.ent. To run these tests you will either need an implementation
-   supporting external entities, or to copy the contents of the .ent file in
-   to the Test.xml files in place of the <!ENTITY % entities ...>%entities;
-   construct.
+   dom3tests.ent. To run these tests you will need an implementation
+   supporting external entities (eg. pxdom 1.1 or later). Alternatively you
+   could copy the contents of dom3tests.ent into each of the files to
+   replace the external entity declaration and reference.
 
 4. Run rundomtests.py from the command line with the pathname of a test file
    or suite file (normally alltests.xml) as an argument. The script should
@@ -40,12 +40,12 @@ implementation, use the --testdom=name command-line option. Known names are:
 
 domts needs a working DOM implementation to interpret the test descriptions
 themselves. By default it will use minidom which usually suffices, but not if
-it's the minidom from Python 2.0, which is too broken to use. If you don't
-want to upgrade (or install PyXML), or your Python comes without minidom
-(well done Debian very good), you can specify an alternative using the
-command-line option --workdom=name. Names are as above, but don't bother
-trying cDomlette, FtMiniDom or microdom - they don't support enough of the DOM
-to work with.
+it's the minidom from Python 2.0, which is too broken to use, or if you're
+trying to run the Level 3 tests that require external entity support.
+
+You can specify an alternative using the command-line option --workdom=name.
+minidom, 4DOM and pxdom should work, the others probably won't support enough
+DOM for domts to work with.
 
 If you have a new DOM implementation not covered here, it should be easy
 enough to add. See the domts/implementations.py file for details. Also, the
@@ -72,3 +72,9 @@ Changelog
   - allowed 'contains' on strings to be case-insensitive
   - fixed isNull on complex objects
   - made Level 3 implementations remove entity references for L3 test docs
+0.5 -> 0.6:
+  - slightly changed exception strings to hopefully not cause unicode errors
+  - redo initialisation of complex objects to allow assignment or construction
+    (tests use both)
+  - made L3 imps as work imps *not* normalise Unicode chars, as some test docs
+    seem to require non-normalised values
