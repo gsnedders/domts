@@ -51,6 +51,7 @@ CONSTANTS= {
 CONDITIONS= {
   'equals': scmp,
   'notEquals': lambda a, e, cs: not scmp(a, e, cs),
+  'contains': lambda a, e, cs: a.find(e)!=-1,
   'null': lambda a, e, cs: a is None,
   'isNull': lambda a, e, cs: a is None,
   'notNull': lambda a, e, cs: a is not None,
@@ -67,14 +68,15 @@ CONDITIONS= {
 }
 
 ACTUALS= ['actual', 'obj', 'collection']
-EXPECTEDS= ['expected', 'size', 'file', 'value', 'type']
+EXPECTEDS= ['expected', 'size', 'file', 'value', 'type', 'str', 'name']
 
 ASSERTS= []
 for condition, comparer in CONDITIONS.items():
   ASSERTS.append('assert'+condition[0].upper()+condition[1:])
 
 EXCEPTIONASSERTS= [
-  'assertDOMException','assertXPathException','assertImplementationException'
+  'assertDOMException', 'assertLSException',
+  'assertXPathException', 'assertImplementationException'
 ]
 
 UNARYOPS= {

@@ -65,8 +65,8 @@ class Level3LSImplementation(Implementation):
   """
   def beginTest(self):
     self.parser= self.implementation.createLSParser(1, None)
-    self.parser.config.setParameter('cdata-sections', True)
-    self.parser.config.setParameter('entities', True)
+    self.parser.domConfig.setParameter('cdata-sections', True)
+    self.parser.domConfig.setParameter('entities', True)
 
   def parseFile(self, path):
     return self.parser.parseURI('file:'+urllib.pathname2url(path))
@@ -75,7 +75,7 @@ class Level3LSImplementation(Implementation):
     if not self.attributeParameters.has_key(attr):
       raise NotImplementedError('Unknown implementationAttribute %s' % attr)
     (param, state)= self.attributeParameters[attr]
-    value= self.parser.config.getParameter(param)
+    value= self.parser.domConfig.getParameter(param)
     if not state:
       return not value
     return value
@@ -87,11 +87,11 @@ class Level3LSImplementation(Implementation):
     if param is not None:
       if not state:
         value= not value
-      if not self.parser.config.canSetParameter(param, value):
+      if not self.parser.domConfig.canSetParameter(param, value):
         raise NotImplementedError(
           'implementationAttribute %s cannot be set to %s' % (attr, str(value))
         )
-      self.parser.config.setParameter(param, value)
+      self.parser.domConfig.setParameter(param, value)
 
   attributeParameters= {
     'namespaceAware': ('namespaces', True),
@@ -99,7 +99,7 @@ class Level3LSImplementation(Implementation):
     'expandEntityReferences': ('entities', False),
     'ignoringElementContentWhitespace': ('element-content-whitespace', False),
     'ignoringComments': ('comments', False)
- }
+  }
 
 
 # Concrete Implementation classes
@@ -115,7 +115,9 @@ class PxdomImplementation(Level3LSImplementation):
   attributeParameters= dictadd(Level3LSImplementation.attributeParameters, {
     'validating': ('pxdom-resolve-resources', True)
   })
-
+  fixedAttributes= dictadd(Implementation.fixedAttributes, {
+    'schemaValidating': False
+  })
 
 class MinidomImplementation(Implementation):
   """ Implementation hook for minidom, the DOM from the Python standard
@@ -138,6 +140,7 @@ class MinidomImplementation(Implementation):
   fixedAttributes= dictadd(Implementation.fixedAttributes, {
     'namespaceAware': True,
     'validating': False,
+    'schemaValidating': False,
     'expandEntityReferences': True,
     'ignoringElementContentWhitespace': False,
     'ignoringComments': False # True for older versions
@@ -171,6 +174,7 @@ class FourDOMImplementation(Implementation):
   fixedAttributes= dictadd(Implementation.fixedAttributes, {
     'namespaceAware': True,
     'validating': True, # Actually, this just means external entities are ok
+    'schemaValidating': False,
     'expandEntityReferences': True,
     'ignoringElementContentWhitespace': False,
     'ignoringComments': False
@@ -217,6 +221,31 @@ class FtMiniDomImplementation(DomletteImplementation):
     self.implementation= implementation
     self.parser= nonvalParse
     DomletteImplementation.__init__(self)
+
+
+class MicrodomImplementation(Implementation):
+  """ Implementation hook for microdom, Twisted's minimal implementation.
+  """
+  implementationName= 'microdom'
+  def __init__(self):
+    import twisted.web.microdom
+    self.module= twisted.web.microdom
+    self.implementation= self # microdom has no DOMImplementation. Pretend.
+    Implementation.__init__(self)
+
+  def parseFile(self, path):
+    return self.module.parseXML(path)
+
+  def hasFeature(self, feature, version):
+    return feature in ('XML', 'Core')
+
+  fixedAttributes= dictadd(Implementation.fixedAttributes, {
+    'namespaceAware': False,
+    'validating': False,
+    'expandEntityReferences': False,
+    'ignoringElementContentWhitespace': False,
+    'ignoringComments': False
+  })
 
 
 # Make a map of all the Implementation classes defined in this module, indexed

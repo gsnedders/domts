@@ -11,6 +11,7 @@ from interrupter import *
 try: True
 except NameError: globals()['True'],globals()['False']= not None, not not None
 NonErrors= (KeyboardInterrupt, SystemExit, SystemError, MemoryError)
+sstr= lambda x: unicode(x).encode('us-ascii', 'replace')
 
 class TestException(Exception):
   """ An exception occurred whilst running a test. This will cause the test to
@@ -48,9 +49,9 @@ class Tester:
       try:
         self.process(testRoot.childNodes)
       except NotImplementedError, e:
-        return (testName, False, True, str(e))
+        return (testName, False, True, e)
       except (AssertionError, TestException), e:
-        return (testName, False, False, str(e)) 
+        return (testName, False, False, e)
       except ReturnValue, e:
         if e is not None:
           raise
@@ -138,6 +139,9 @@ class Tester:
         self.ifCondition(child)
       elif t=='try':
         self.tryBlock(child)
+      elif t=='fail':
+        name= child.getAttribute('id')
+        raise AssertionError('Assertion %s failed, no exception' % name)
       elif t=='return':
         if child.hasAttribute('value'):
           raise ReturnValue(self.ueval(child.getAttribute('value')))
@@ -152,26 +156,39 @@ class Tester:
       elif t in ('load', 'getResourceURI'):
         varName= child.getAttribute('var')
         ext= self.implementation.extension
+        if child.getAttribute('href')=='TESTPDF':
+          ext= '.pdf'
         filePath= os.path.join(self.filesPath, child.getAttribute('href').lower()+ext)
         if t=='getResourceURI':
           self.scope[varName]= 'file:'+urllib.pathname2url(filePath)
         else:
-          self.scope[varName]= self.implementation.parseFile(filePath)
-      elif t=='createTempFileURI':
-        filePath= tempfile.mktemp() # not good for security, but portable
-        self.tempFiles.append(filePath)
-        varName= child.getAttribute('var')
-        self.scope[varName]= 'file:'+urllib.pathname2url(filePath)
-      elif t=='createTempHttpURI':
-        self.scope[child.getAttribute('var')]= (
-          'http://localhost:8080/domts/temp/%d.xml'%int(random.random()*10000)
-        )
+          try:
+            self.scope[varName]= self.implementation.parseFile(filePath)
+          except NonErrors:
+            raise
+          except Exception, e:
+            raise TestException('Document load failed', e)
+      elif t=='createTempURI':
+        scheme= child.getAttribute('scheme')
+        if scheme=='file':
+          filePath= tempfile.mktemp()
+          self.tempFiles.append(filePath)
+          varName= child.getAttribute('var')
+          self.scope[varName]= 'file:'+urllib.pathname2url(filePath)
+        elif scheme=='http':
+          self.scope[child.getAttribute('var')]= (
+            'http://localhost:8080/domts/temp/%d.xml'%int(random.random()*10000)
+          )
+        else:
+          raise NotImplementedError('Unknown scheme '+scheme)
       elif t=='createXPathEvaluator':
         self.scope[child.getAttribute('var')]= (
           self.ueval(child.getAttribute('document'))
         )
       elif t=='debug':
         print self.ueval(child.getAttribute('out'))
+      elif t=='DOMImplementationRegistry.newInstance':
+        raise NotImplementedError('DOMImplementationRegistry is not bound in Python')
       else:
         raise NotImplementedError('Unknown TSML element %s' % t)
 
@@ -298,7 +315,15 @@ class Tester:
       actual= self.checkCondition(assertContents[0])
     else:
       actual= self.getOneOf(testNode, ACTUALS)
+      if testNode.hasAttribute('bitmask'):
+        actual= actual & int(testNode.getAttribute('bitmask'))
     expected= self.getOneOf(testNode, EXPECTEDS)
+    if testNode.hasAttribute('isAbsolute'):
+      ab= self.ueval(testNode.getAttribute('isAbsolute'))
+      if ab and expected is not None:
+        ext= self.implementation.extension
+        path= os.path.join(self.filesPath, expected+ext)
+        expected= 'file:'+urllib.pathname2url(path)
     cs= True
     if testNode.hasAttribute('ignoreCase'):
       cs= not self.ueval(testNode.getAttribute('ignoreCase'))
@@ -307,7 +332,7 @@ class Tester:
     if not CONDITIONS[assertType](actual, expected, cs):
       if expected is not None:
         raise AssertionError('Assertion %s failed. Expected %s, got %s' % (
-          testNode.getAttribute('id'), expected, actual
+          testNode.getAttribute('id'), sstr(expected), sstr(actual)
         ))
       else:
         raise AssertionError('Assertion %s failed. Got %s' % (
@@ -326,10 +351,13 @@ class Tester:
       self.process(assertContents)
     except TestException, e:
       if requiredException is not None:
-        if getattr(e.exception, 'code', None)!=requiredException:
-          raise AssertionError('Assertion %s failed. Expected %s, got %s %s'%(
+        code= getattr(e.exception, 'code', None)
+        if code is not None and code>=len(EXCEPTIONS):
+          code= '?'
+        if code!=requiredException:
+          raise AssertionError('Assertion %s failed. Expected %s, got %s (%s, %s)'%(
             testNode.getAttribute('id'), EXCEPTIONS[requiredException],
-            e.exception.__class__.__name__, str(e.exception)
+            str(code), e.exception.__class__.__name__, str(e.exception)
           ))
     else:
       if requiredException is not None:
@@ -413,12 +441,17 @@ class Tester:
   def forLoop(self, testNode):
     member= testNode.getAttribute('member')
     collection= self.ueval(testNode.getAttribute('collection'))
-    try:
-      collectionList= list(collection)
-    except NonErrors:
-      raise
-    except Exception, e:
-      raise TestException('Reading list %s' % collection, e)
+    if hasattr(collection, 'item'):
+      collectionList= []
+      for ix in range(collection.length):
+        collectionList.append(collection.item(ix))
+    else:
+      try:
+        collectionList= list(collection)
+      except NonErrors:
+        raise
+      except Exception, e:
+        raise TestException('Reading list %s' % collection, e)
     for self.scope[member] in collectionList:
       self.process(testNode.childNodes)
 
@@ -448,6 +481,13 @@ class Tester:
 
 
   def checkCondition(self, condNode):
+    # If the condition is <not>, look inside it and invert the result
+    #
+    if condNode.tagName=='not':
+      for child in condNode.childNodes:
+        if child.nodeType==child.ELEMENT_NODE:
+          return not self.checkCondition(child)
+
     # If the condition is an operator like <or>, recurse into each subcondition
     #
     if CONDITIONOPS.has_key(condNode.tagName):

@@ -67,7 +67,8 @@ PROPERTIES= [
   'resultType', 'numberValue', 'stringValue', 'booleanValue',
   'singleNodeValue', 'invalidIteratorState', 'snapshotLength',
   # TS-specific properties
-  'allEvents', 'atEvents', 'bubbledEvents', 'capturedEvents'
+  'allErrors', 'allEvents', 'atEvents', 'bubbledEvents', 'capturedEvents',
+  'allNotifications', 'operation', 'key', 'dst'
 ]
 
 # DOMException types, in order.
@@ -82,6 +83,9 @@ EXCEPTIONS= [ '*',
 ]
 EXCEPTIONS= EXCEPTIONS+['*']*(51-len(EXCEPTIONS))+ [
   'INVALID_EXPRESSION_ERR', 'TYPE_ERR'
+]
+EXCEPTIONS= EXCEPTIONS+['*']*(81-len(EXCEPTIONS))+ [
+  'PARSE_ERR', 'SERIALIZE_ERR'
 ]
 
 # DOM methods and the correct order for their arguments.
@@ -196,6 +200,7 @@ METHODS= {
   'getParameter':                ['name'],
   'setParameter':                ['name', 'value'],
   'canSetParameter':             ['name', 'value'],
+  'contains':                    ['str'],
   # level3/ls
   'createLSParser':              ['mode', 'schemaType'],
   'createLSSerializer':          [],
@@ -293,10 +298,11 @@ SIMPLEOBJECTS= {
 }
 
 
+# DOMTS-specific utility objects, implementing the application-side interfaces
+# defined in DOM L3. Act as monitors, recording each time they are called with
+# parameters to be checked later.
+#
 class EventMonitor:
-  """ Predefined TS utility object. An EventListener that records all events
-      passed to it.
-  """
   def __init__(self):
     self.allEvents= []
     self.capturedEvents= []
@@ -307,6 +313,26 @@ class EventMonitor:
     [self.capturedEvents, self.atEvents, self.bubbledEvents
     ][evt.eventPhase-1].append(evt)
 
+class DOMErrorMonitor:
+  def __init__(self):
+    self.allErrors= []
+  def handleError(self, error):
+    self.allErrors.append(error)
+    return (error.severity<2)
+
+class UserDataMonitor:
+  def __init__(self):
+    self.allNotifications= []
+  def handle(self, operation, key, data, src, dst):
+    self.allNotifications.append(Notification(operation, key, data, src, dst))
+class Notification:
+  def __init__(self, operation, key, data, src, dst):
+    self.operation= operation
+    self.key= key
+    self.data= data
+    self.src= src
+    self.dst= dst
+
 # Objects that tests can create, in addition to List and Collection which are
 # defined in domts.inbuilts.
 #
@@ -315,5 +341,7 @@ COMPLEXOBJECTS= dictadd(OBJECTS, {
   'LSParserFilter': TestCreatedObject,
   'LSSerializerFilter': TestCreatedObject,
   'LSResourceResolver': TestCreatedObject,
-  'EventMonitor':  EventMonitor
+  'EventMonitor':  EventMonitor,
+  'DOMErrorMonitor': DOMErrorMonitor,
+  'UserDataMonitor': UserDataMonitor
 })
